@@ -1,0 +1,23 @@
+[package]
+name = "turzx-stats"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "A small, sleepy stats screen for the TURZX 9.2\" USB panel (1cbe:0092)"
+
+[dependencies]
+rusb = { version = "0.9", features = ["vendored"] }
+des = "0.8"
+cbc = "0.1"
+png = "0.17"
+fontdue = "0.9"
+nvml-wrapper = "0.10"
+serde_json = "1"
+libc = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
