@@ -1,0 +1,5 @@
+# The TURZX 9.2" panel for the members of group plugdev. The usual "uaccess" tag only helps
+# whoever sits at the machine; this also works over SSH and for a service.
+# Install: sudo cp 61-turzx-plugdev.rules /etc/udev/rules.d/ && sudo udevadm control --reload-rules
+#          && sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=1cbe
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1cbe", ATTRS{idProduct}=="0092", GROUP="plugdev", MODE="0660"

@@ -1,5 +1,6 @@
-# ~/.config/systemd/user/turzx-stats.service on the machine the panel is plugged into.
-# `sudo loginctl enable-linger <user>` makes it start at boot without a login.
+# A systemd user service. Copy to ~/.config/systemd/user/turzx-stats.service, then:
+#   systemctl --user enable --now turzx-stats
+#   sudo loginctl enable-linger "$USER"     # start at boot, without a login
 [Unit]
 Description=turzx-stats (TURZX 9.2 stats screen)
 

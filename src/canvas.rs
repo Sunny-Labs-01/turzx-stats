@@ -10,6 +10,15 @@ pub const HIDDEN_TOP: i32 = 18;
 
 pub type Rgb = (u8, u8, u8);
 
+/// Green through yellow to red, `t` 0..1.
+pub fn gradient(t: f32) -> Rgb {
+    const STOPS: [Rgb; 3] = [(80, 210, 110), (235, 215, 70), (240, 85, 75)];
+    let t = t.clamp(0.0, 1.0) * 2.0;
+    let (a, b, k) = if t < 1.0 { (STOPS[0], STOPS[1], t) } else { (STOPS[1], STOPS[2], t - 1.0) };
+    let mix = |p: u8, q: u8| (p as f32 + (q as f32 - p as f32) * k).round() as u8;
+    (mix(a.0, b.0), mix(a.1, b.1), mix(a.2, b.2))
+}
+
 pub struct Fonts {
     regular: fontdue::Font,
     bold: fontdue::Font,
@@ -25,8 +34,8 @@ impl Fonts {
                 .map_err(|e| format!("font {path}: {e}"))
         };
         Ok(Fonts {
-            regular: load("DejaVuSans.ttf")?,
-            bold: load("DejaVuSans-Bold.ttf")?,
+            regular: load("DejaVuSansMono.ttf")?,
+            bold: load("DejaVuSansMono-Bold.ttf")?,
             cache: HashMap::new(),
         })
     }
@@ -120,26 +129,36 @@ impl Canvas {
         self.text(f, right - w, y, px, bold, c, s);
     }
 
-    /// A track with its filled part, `frac` 0..1.
-    pub fn bar(&mut self, x: i32, y: i32, w: i32, h: i32, frac: f32, track: Rgb, fill: Rgb) {
-        self.rect(x, y, w, h, h / 2, track);
-        let filled = (w as f32 * frac.clamp(0.0, 1.0)).round() as i32;
-        if filled > 0 {
-            self.rect(x, y, filled.max(h), h, h / 2, fill);
+    /// A meter of small blocks, `frac` 0..1: the filled ones take the gradient's colour at
+    /// their place, as a terminal's meters do.
+    pub fn meter(&mut self, x: i32, y: i32, w: i32, h: i32, frac: f32, empty: Rgb) {
+        let (block, gap) = (9, 4);
+        let count = (w + gap) / (block + gap);
+        let filled = (count as f32 * frac.clamp(0.0, 1.0)).round() as i32;
+        // anything above nothing shows one block
+        let filled = if frac > 0.004 { filled.max(1) } else { filled };
+        for i in 0..count {
+            let colour = if i < filled { gradient(i as f32 / (count - 1).max(1) as f32) } else { empty };
+            self.rect(x + i * (block + gap), y, block, h, 0, colour);
         }
     }
 
-    /// Columns for a history of values 0..100, the newest at the right edge.
-    pub fn history(&mut self, x: i32, y: i32, w: i32, h: i32, values: &[f32], track: Rgb, fill: Rgb) {
-        self.rect(x, y + h - 2, w, 2, 0, track);
-        let step = 5;
+    /// A graph of values 0..100, the newest at the right edge; each row has the gradient's
+    /// colour for its height, and a dotted floor shows where nothing was.
+    pub fn graph(&mut self, x: i32, y: i32, w: i32, h: i32, values: &[f32], floor: Rgb) {
+        let step = 4;
         let slots = (w / step) as usize;
         let shown = &values[values.len().saturating_sub(slots)..];
         let start = x + w - shown.len() as i32 * step;
+        for i in 0..slots as i32 {
+            self.rect(x + w - (i + 1) * step, y + h - 2, 2, 2, 0, floor);
+        }
+        let rows = h / 4;
         for (i, v) in shown.iter().enumerate() {
-            let bar = ((h - 2) as f32 * (v / 100.0).clamp(0.0, 1.0)).round() as i32;
-            if bar > 0 {
-                self.rect(start + i as i32 * step, y + h - 2 - bar, step - 2, bar, 0, fill);
+            let lit = (rows as f32 * (v / 100.0).clamp(0.0, 1.0)).ceil() as i32;
+            for row in 0..lit {
+                let colour = gradient(row as f32 / (rows - 1).max(1) as f32);
+                self.rect(start + i as i32 * step, y + h - 2 - row * 4, 2, 2, 0, colour);
             }
         }
     }
